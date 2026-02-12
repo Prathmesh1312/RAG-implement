@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Chunking Demo — Visualize 7 Strategies</title>
+    <meta name="description"
+        content="Upload a PDF and visualize how 7 different chunking strategies split the same document.">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --font: 'Inter', -apple-system, sans-serif;
+            --mono: 'JetBrains Mono', monospace;
+            --bg: #0a0b10;
+            --bg-card: #13151d;
+            --bg-input: #1c1f2e;
+            --bg-chunk: #1a1d2a;
+            --border: #262a3d;
+            --border-hover: #3d4260;
+            --text: #e4e6f0;
+            --text-sec: #9ea3b8;
+            --text-muted: #5d6177;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --green: #34d399;
+            --orange: #fb923c;
+            --red: #f87171;
+            --cyan: #22d3ee;
+            --pink: #f472b6;
+            --yellow: #fbbf24;
+            --purple: #a78bfa;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --transition: all 0.2s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px 28px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent), var(--cyan));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-sub {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .doc-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 99px;
+            font-size: 0.8rem;
+            color: var(--text-sec);
+        }
+
+        .doc-badge .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: 0.4
+            }
+        }
+
+        /* Layout */
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px 28px 40px;
+        }
+
+        /* Upload Section */
+        .upload-section {
+            margin-bottom: 24px;
+        }
+
+        .drop-zone {
+            background: var(--bg-card);
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 32px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.dragover {
+            border-color: var(--accent);
+            background: var(--accent-glow);
+        }
+
+        .drop-zone.has-file {
+            border-style: solid;
+            border-color: var(--green);
+            background: rgba(52, 211, 153, 0.05);
+            padding: 16px 20px;
+        }
+
+        .drop-zone-icon {
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+        }
+
+        .drop-zone-text {
+            font-size: 0.85rem;
+            color: var(--text-sec);
+        }
+
+        .drop-zone-text strong {
+            color: var(--accent);
+        }
+
+        .drop-zone-hint {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        .drop-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            font-size: 0.85rem;
+        }
+
+        .file-info-name {
+            font-weight: 600;
+            color: var(--green);
+        }
+
+        .file-info-stats {
+            color: var(--text-sec);
+        }
+
+        .file-info-change {
+            color: var(--accent);
+            cursor: pointer;
+            text-decoration: underline;
+            font-size: 0.8rem;
+        }
+
+        /* Strategy Tabs */
+        .tabs-wrapper {
+            margin-bottom: 20px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .tabs-wrapper::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 6px;
+            min-width: max-content;
+        }
+
+        .tab {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg-card);
+            color: var(--text-sec);
+            font-family: var(--font);
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+
+        .tab:hover {
+            border-color: var(--border-hover);
+            color: var(--text);
+            background: var(--bg-input);
+        }
+
+        .tab.active {
+            border-color: var(--accent);
+            color: var(--text);
+            background: var(--accent-glow);
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+
+        .tab-icon {
+            font-size: 1rem;
+        }
+
+        /* Strategy Panel */
+        .strategy-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .strategy-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
+        }
+
+        .strategy-info h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .strategy-desc {
+            font-size: 0.82rem;
+            color: var(--text-sec);
+            line-height: 1.5;
+            max-width: 700px;
+        }
+
+        .strategy-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .control-label {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .control-input {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px 10px;
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: 0.82rem;
+            width: 90px;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .control-input:focus {
+            border-color: var(--accent);
+        }
+
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            padding: 10px 20px;
+            font-family: var(--font);
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
+            align-self: flex-end;
+        }
+
+        .btn:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            padding: 12px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            background: rgba(99, 102, 241, 0.03);
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stat-value {
+            font-family: var(--mono);
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--cyan);
+        }
+
+        .stat-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        /* Chunks Grid */
+        .chunks-container {
+            padding: 20px 24px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .chunks-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chunk-card {
+            background: var(--bg-chunk);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 14px 16px;
+            transition: var(--transition);
+            animation: chunkIn 0.3s ease both;
+            position: relative;
+        }
+
+        .chunk-card:hover {
+            border-color: var(--border-hover);
+            transform: translateX(4px);
+        }
+
+        @keyframes chunkIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chunk-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .chunk-index {
+            font-family: var(--mono);
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 4px;
+            color: white;
+        }
+
+        .chunk-meta {
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            display: flex;
+            gap: 12px;
+        }
+
+        .chunk-text {
+            font-size: 0.82rem;
+            color: var(--text-sec);
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 120px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .chunk-text.expanded {
+            max-height: none;
+        }
+
+        .chunk-text::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: linear-gradient(transparent, var(--bg-chunk));
+            pointer-events: none;
+        }
+
+        .chunk-text.expanded::after {
+            display: none;
+        }
+
+        .chunk-expand {
+            font-size: 0.72rem;
+            color: var(--accent);
+            cursor: pointer;
+            margin-top: 6px;
+            display: inline-block;
+        }
+
+        .chunk-expand:hover {
+            text-decoration: underline;
+        }
+
+        /* Size Bar */
+        .chunk-size-bar {
+            margin-top: 8px;
+            height: 4px;
+            background: var(--bg-input);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .chunk-size-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+
+        /* Empty State */
+        .empty-state {
+            padding: 60px 20px;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            opacity: 0.4;
+            margin-bottom: 12px;
+        }
+
+        .empty-state h3 {
+            font-size: 1rem;
+            color: var(--text-sec);
+            margin-bottom: 6px;
+        }
+
+        .empty-state p {
+            font-size: 0.82rem;
+            max-width: 360px;
+            margin: 0 auto;
+        }
+
+        /* Loading */
+        .loading-overlay {
+            display: none;
+            padding: 40px;
+            text-align: center;
+            color: var(--text-sec);
+        }
+
+        .loading-overlay.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            padding: 12px 20px;
+            border-radius: var(--radius-sm);
+            font-size: 0.82rem;
+            font-weight: 500;
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 3.7s forwards;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .toast-success {
+            background: #065f46;
+            color: var(--green);
+            border: 1px solid #0d8b5e;
+        }
+
+        .toast-error {
+            background: #7f1d1d;
+            color: var(--red);
+            border: 1px solid #b91c1c;
+        }
+
+        .toast-info {
+            background: #1e1b4b;
+            color: #a5b4fc;
+            border: 1px solid #3730a3;
+        }
+
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateX(40px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes toastOut {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 12px;
+            }
+
+            .strategy-header {
+                flex-direction: column;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 8px;
+                align-items: flex-start;
+                padding: 16px 12px 0;
+            }
+        }
+
+        /* Chunk color palette */
+        .color-0 {
+            background: #3b82f6;
+        }
+
+        .color-1 {
+            background: #8b5cf6;
+        }
+
+        .color-2 {
+            background: #06b6d4;
+        }
+
+        .color-3 {
+            background: #f59e0b;
+        }
+
+        .color-4 {
+            background: #ef4444;
+        }
+
+        .color-5 {
+            background: #10b981;
+        }
+
+        .color-6 {
+            background: #ec4899;
+        }
+
+        /* Compare Mode */
+        .compare-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding: 12px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+        }
+
+        .compare-bar-label {
+            font-size: 0.8rem;
+            color: var(--text-sec);
+            font-weight: 600;
+        }
+
+        .compare-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-sec);
+            font-family: var(--font);
+            font-size: 0.75rem;
+            padding: 6px 12px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .compare-btn:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+
+        .compare-btn.active {
+            background: var(--accent-glow);
+            border-color: var(--accent);
+            color: var(--text);
+        }
+
+        .compare-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+            gap: 16px;
+        }
+
+        .compare-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .compare-card-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .compare-card-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .compare-card-stat {
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            color: var(--cyan);
+        }
+
+        .compare-card-body {
+            padding: 12px 16px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .compare-chunk-bar {
+            display: flex;
+            gap: 3px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .compare-chunk-block {
+            height: 24px;
+            border-radius: 3px;
+            min-width: 4px;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .compare-chunk-block:hover {
+            opacity: 0.8;
+            transform: scaleY(1.3);
+        }
+
+        .mini-chunk {
+            background: var(--bg-chunk);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 6px 8px;
+            font-size: 0.72rem;
+            color: var(--text-sec);
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <div>
+            <h1 id="mainTitle">✂️ RAG Chunking Demo</h1>
+            <div class="header-sub">Upload a PDF · Compare 7 chunking strategies side by side</div>
+        </div>
+        <div class="doc-badge" id="docBadge" style="display:none">
+            <div class="dot"></div>
+            <span id="docBadgeText"></span>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- Upload Section -->
+        <div class="upload-section">
+            <div class="drop-zone" id="dropZone">
+                <div class="drop-zone-icon">📄</div>
+                <div class="drop-zone-text">
+                    <strong>Click to upload</strong> or drag & drop a PDF
+                </div>
+                <div class="drop-zone-hint">PDF files only</div>
+                <input type="file" id="fileInput" accept=".pdf">
+            </div>
+        </div>
+
+        <!-- View Toggle -->
+        <div class="compare-bar" id="viewToggle" style="display:none">
+            <div class="compare-bar-label">View Mode</div>
+            <div>
+                <button class="compare-btn active" id="singleViewBtn" onclick="setView('single')">📋 Single
+                    Strategy</button>
+                <button class="compare-btn" id="compareViewBtn" onclick="setView('compare')">📊 Compare All</button>
+            </div>
+        </div>
+
+        <!-- Strategy Tabs (single view) -->
+        <div class="tabs-wrapper" id="tabsWrapper" style="display:none">
+            <div class="tabs" id="tabsContainer"></div>
+        </div>
+
+        <!-- Single Strategy Panel -->
+        <div class="strategy-panel" id="strategyPanel" style="display:none">
+            <div class="strategy-header">
+                <div class="strategy-info">
+                    <h2 id="strategyTitle"></h2>
+                    <p class="strategy-desc" id="strategyDesc"></p>
+                </div>
+                <div class="strategy-controls" id="controlsArea"></div>
+            </div>
+            <div class="stats-bar" id="statsBar" style="display:none"></div>
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="spinner"></div>
+                Chunking...
+            </div>
+            <div class="chunks-container" id="chunksContainer">
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-state-icon">✂️</div>
+                    <h3>Ready to chunk</h3>
+                    <p>Adjust parameters if needed, then click "Run Chunking" to see the results.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compare View -->
+        <div class="compare-grid" id="compareGrid" style="display:none"></div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // =====================================================================
+        // STATE
+        // =====================================================================
+        let documentText = '';
+        let documentPages = [];
+        let strategies = {};
+        let activeStrategy = 'fixed_size';
+        let currentView = 'single';
+        let cachedResults = {};
+
+        const CHUNK_COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#f59e0b', '#ef4444', '#10b981', '#ec4899',
+            '#6366f1', '#14b8a6', '#f97316', '#a855f7', '#eab308'];
+
+        // =====================================================================
+        // INIT
+        // =====================================================================
+        async function init() {
+            const res = await fetch('/api/strategies');
+            strategies = await res.json();
+            buildTabs();
+            selectStrategy('fixed_size');
+        }
+
+        function buildTabs() {
+            const container = document.getElementById('tabsContainer');
+            container.innerHTML = '';
+            for (const [key, info] of Object.entries(strategies)) {
+                const tab = document.createElement('button');
+                tab.className = 'tab';
+                tab.dataset.key = key;
+                tab.innerHTML = `<span class="tab-icon">${info.icon}</span> ${info.name}`;
+                tab.onclick = () => selectStrategy(key);
+                container.appendChild(tab);
+            }
+        }
+
+        // =====================================================================
+        // VIEW TOGGLE
+        // =====================================================================
+        function setView(view) {
+            currentView = view;
+            document.getElementById('singleViewBtn').classList.toggle('active', view === 'single');
+            document.getElementById('compareViewBtn').classList.toggle('active', view === 'compare');
+
+            document.getElementById('tabsWrapper').style.display = view === 'single' ? '' : 'none';
+            document.getElementById('strategyPanel').style.display = view === 'single' ? '' : 'none';
+            document.getElementById('compareGrid').style.display = view === 'compare' ? '' : 'none';
+
+            if (view === 'compare') runCompareAll();
+        }
+
+        // =====================================================================
+        // UPLOAD
+        // =====================================================================
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault(); dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) { uploadFile(fileInput.files[0]); fileInput.value = ''; }
+        });
+
+        async function uploadFile(file) {
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                showToast('Only PDF files are supported.', 'error');
+                return;
+            }
+
+            showToast(`Uploading "${file.name}"...`, 'info');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+
+                if (!res.ok) { showToast(`❌ ${data.detail}`, 'error'); return; }
+
+                documentText = data.text;
+                documentPages = data.pages;
+                cachedResults = {};
+
+                // Update upload zone to show file info
+                dropZone.classList.add('has-file');
+                dropZone.innerHTML = `
+                    <div class="file-info">
+                        <span class="file-info-name">📄 ${data.filename}</span>
+                        <span class="file-info-stats">${data.page_count} pages · ${data.total_chars.toLocaleString()} chars · ${data.total_words.toLocaleString()} words</span>
+                        <span class="file-info-change" onclick="resetUpload()">Change file</span>
+                    </div>
+                    <input type="file" id="fileInput" accept=".pdf" style="display:none">
+                `;
+
+                // Show UI
+                document.getElementById('viewToggle').style.display = '';
+                document.getElementById('tabsWrapper').style.display = '';
+                document.getElementById('strategyPanel').style.display = '';
+                document.getElementById('docBadge').style.display = '';
+                document.getElementById('docBadgeText').textContent =
+                    `${data.filename} · ${data.page_count} pages`;
+
+                showToast(`✅ Uploaded "${data.filename}"`, 'success');
+
+                // Auto-run first strategy
+                runChunking();
+
+            } catch (e) {
+                showToast(`❌ Upload failed: ${e.message}`, 'error');
+            }
+        }
+
+        function resetUpload() {
+            documentText = '';
+            documentPages = [];
+            cachedResults = {};
+            dropZone.classList.remove('has-file');
+            dropZone.innerHTML = `
+                <div class="drop-zone-icon">📄</div>
+                <div class="drop-zone-text"><strong>Click to upload</strong> or drag & drop a PDF</div>
+                <div class="drop-zone-hint">PDF files only</div>
+                <input type="file" id="fileInput" accept=".pdf">
+            `;
+            document.getElementById('fileInput').addEventListener('change', () => {
+                if (document.getElementById('fileInput').files.length) {
+                    uploadFile(document.getElementById('fileInput').files[0]);
+                    document.getElementById('fileInput').value = '';
+                }
+            });
+            document.getElementById('viewToggle').style.display = 'none';
+            document.getElementById('tabsWrapper').style.display = 'none';
+            document.getElementById('strategyPanel').style.display = 'none';
+            document.getElementById('compareGrid').style.display = 'none';
+            document.getElementById('docBadge').style.display = 'none';
+        }
+
+        // =====================================================================
+        // STRATEGY SELECTION
+        // =====================================================================
+        function selectStrategy(key) {
+            activeStrategy = key;
+            const info = strategies[key];
+
+            // Update tabs
+            document.querySelectorAll('.tab').forEach(t =>
+                t.classList.toggle('active', t.dataset.key === key));
+
+            // Update header
+            document.getElementById('strategyTitle').textContent = `${info.icon} ${info.name}`;
+            document.getElementById('strategyDesc').textContent = info.description;
+
+            // Build controls
+            buildControls(key);
+
+            // Show cached results if available
+            if (cachedResults[key]) {
+                renderChunks(cachedResults[key].chunks, cachedResults[key].stats);
+            } else {
+                document.getElementById('chunksContainer').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">✂️</div>
+                        <h3>Ready to chunk</h3>
+                        <p>Adjust parameters if needed, then click "Run Chunking" to see the results.</p>
+                    </div>`;
+                document.getElementById('statsBar').style.display = 'none';
+            }
+
+            if (documentText) runChunking();
+        }
+
+        function buildControls(key) {
+            const area = document.getElementById('controlsArea');
+            let html = '';
+
+            if (key === 'fixed_size') {
+                html = `
+                    <div class="control-group">
+                        <span class="control-label">Chunk Size</span>
+                        <input class="control-input" type="number" id="ctrl_chunk_size" value="500" min="50" max="5000">
+                    </div>
+                    <div class="control-group">
+                        <span class="control-label">Overlap</span>
+                        <input class="control-input" type="number" id="ctrl_overlap" value="50" min="0" max="500">
+                    </div>`;
+            } else if (key === 'variable_size' || key === 'dynamic') {
+                html = `
+                    <div class="control-group">
+                        <span class="control-label">Min Size</span>
+                        <input class="control-input" type="number" id="ctrl_min_size" value="200" min="50" max="2000">
+                    </div>
+                    <div class="control-group">
+                        <span class="control-label">Max Size</span>
+                        <input class="control-input" type="number" id="ctrl_max_size" value="800" min="100" max="5000">
+                    </div>`;
+            } else if (key === 'task_based') {
+                html = `
+                    <div class="control-group">
+                        <span class="control-label">Workers</span>
+                        <input class="control-input" type="number" id="ctrl_workers" value="4" min="2" max="16">
+                    </div>`;
+            }
+
+            html += `<button class="btn" onclick="runChunking()" id="runBtn">▶ Run Chunking</button>`;
+            area.innerHTML = html;
+        }
+
+        // =====================================================================
+        // RUN CHUNKING
+        // =====================================================================
+        async function runChunking() {
+            if (!documentText) {
+                showToast('Upload a PDF first.', 'error');
+                return;
+            }
+
+            const key = activeStrategy;
+            const body = {
+                strategy: key,
+                text: documentText,
+                pages: documentPages,
+                chunk_size: parseInt(document.getElementById('ctrl_chunk_size')?.value || 500),
+                chunk_overlap: parseInt(document.getElementById('ctrl_overlap')?.value || 50),
+                min_size: parseInt(document.getElementById('ctrl_min_size')?.value || 200),
+                max_size: parseInt(document.getElementById('ctrl_max_size')?.value || 800),
+                num_workers: parseInt(document.getElementById('ctrl_workers')?.value || 4),
+            };
+
+            document.getElementById('loadingOverlay').classList.add('active');
+            document.getElementById('chunksContainer').style.display = 'none';
+            document.getElementById('statsBar').style.display = 'none';
+            document.getElementById('runBtn').disabled = true;
+
+            try {
+                const res = await fetch('/api/chunk', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+                const data = await res.json();
+
+                if (!res.ok) { showToast(`❌ ${data.detail}`, 'error'); return; }
+
+                cachedResults[key] = data;
+                renderChunks(data.chunks, data.stats);
+
+            } catch (e) {
+                showToast(`❌ Chunking failed: ${e.message}`, 'error');
+            } finally {
+                document.getElementById('loadingOverlay').classList.remove('active');
+                document.getElementById('chunksContainer').style.display = '';
+                const btn = document.getElementById('runBtn');
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        // =====================================================================
+        // RENDER CHUNKS
+        // =====================================================================
+        function renderChunks(chunks, stats) {
+            // Stats bar
+            const statsBar = document.getElementById('statsBar');
+            statsBar.style.display = '';
+            statsBar.innerHTML = `
+                <div class="stat"><span class="stat-value">${stats.total_chunks}</span><span class="stat-label">Chunks</span></div>
+                <div class="stat"><span class="stat-value">${stats.avg_chars}</span><span class="stat-label">Avg chars</span></div>
+                <div class="stat"><span class="stat-value">${stats.min_chars}</span><span class="stat-label">Min</span></div>
+                <div class="stat"><span class="stat-value">${stats.max_chars}</span><span class="stat-label">Max</span></div>
+                <div class="stat"><span class="stat-value">${stats.avg_words}</span><span class="stat-label">Avg words</span></div>
+            `;
+
+            // Chunk cards
+            const container = document.getElementById('chunksContainer');
+            const maxChars = Math.max(...chunks.map(c => c.char_count), 1);
+
+            container.innerHTML = chunks.map((chunk, i) => {
+                const color = CHUNK_COLORS[i % CHUNK_COLORS.length];
+                const pct = Math.round((chunk.char_count / maxChars) * 100);
+                const preview = chunk.text.length > 300
+                    ? chunk.text.substring(0, 300)
+                    : chunk.text;
+                const needsExpand = chunk.text.length > 300;
+
+                return `
+                    <div class="chunk-card" style="animation-delay: ${i * 30}ms; border-left: 3px solid ${color};">
+                        <div class="chunk-header">
+                            <span class="chunk-index" style="background: ${color}">Chunk ${chunk.index + 1}</span>
+                            <div class="chunk-meta">
+                                <span>${chunk.char_count} chars</span>
+                                <span>${chunk.word_count} words</span>
+                            </div>
+                        </div>
+                        <div class="chunk-text" id="chunk-text-${i}">${escapeHtml(preview)}${needsExpand ? '...' : ''}</div>
+                        ${needsExpand ? `<span class="chunk-expand" onclick="toggleChunk(${i}, ${JSON.stringify(encodeURIComponent(chunk.text)).replace(/"/g, '&quot;')})">Show more ▼</span>` : ''}
+                        <div class="chunk-size-bar">
+                            <div class="chunk-size-fill" style="width: ${pct}%; background: ${color};"></div>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        function toggleChunk(i, encodedText) {
+            const el = document.getElementById(`chunk-text-${i}`);
+            const expandEl = el.nextElementSibling;
+            if (el.classList.contains('expanded')) {
+                el.classList.remove('expanded');
+                const text = decodeURIComponent(encodedText);
+                el.textContent = text.substring(0, 300) + '...';
+                expandEl.textContent = 'Show more ▼';
+            } else {
+                el.classList.add('expanded');
+                el.textContent = decodeURIComponent(encodedText);
+                expandEl.textContent = 'Show less ▲';
+            }
+        }
+
+        // =====================================================================
+        // COMPARE ALL
+        // =====================================================================
+        async function runCompareAll() {
+            if (!documentText) {
+                showToast('Upload a PDF first.', 'error');
+                return;
+            }
+
+            const grid = document.getElementById('compareGrid');
+            grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--text-muted);"><div class="spinner"></div>Running all 7 strategies...</div>';
+
+            const keys = Object.keys(strategies);
+            const results = {};
+
+            for (const key of keys) {
+                if (cachedResults[key]) {
+                    results[key] = cachedResults[key];
+                    continue;
+                }
+
+                try {
+                    const res = await fetch('/api/chunk', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            strategy: key,
+                            text: documentText,
+                            pages: documentPages,
+                            chunk_size: 500, chunk_overlap: 50,
+                            min_size: 200, max_size: 800,
+                            num_workers: 4,
+                        }),
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        results[key] = data;
+                        cachedResults[key] = data;
+                    }
+                } catch (e) {
+                    console.error(`Failed: ${key}`, e);
+                }
+            }
+
+            // Render compare cards
+            const globalMax = Math.max(...Object.values(results).flatMap(r => r.chunks.map(c => c.char_count)), 1);
+
+            grid.innerHTML = keys.map(key => {
+                const info = strategies[key];
+                const data = results[key];
+                if (!data) return '';
+
+                const { chunks, stats } = data;
+
+                // Build chunk visualization bars
+                const barsHtml = chunks.map((chunk, i) => {
+                    const w = Math.max(Math.round((chunk.char_count / globalMax) * 100), 2);
+                    const color = CHUNK_COLORS[i % CHUNK_COLORS.length];
+                    return `<div class="compare-chunk-block" style="width:${w}%; background:${color};" title="Chunk ${chunk.index + 1}: ${chunk.char_count} chars"></div>`;
+                }).join('');
+
+                // Mini chunk previews (first 5)
+                const previewsHtml = chunks.slice(0, 5).map((chunk, i) => {
+                    return `<div class="mini-chunk"><strong style="color:${CHUNK_COLORS[i % CHUNK_COLORS.length]}">C${chunk.index + 1}</strong> · ${chunk.char_count}ch · ${escapeHtml(chunk.text.substring(0, 80))}...</div>`;
+                }).join('') + (chunks.length > 5 ? `<div class="mini-chunk" style="text-align:center; color:var(--text-muted)">+ ${chunks.length - 5} more chunks</div>` : '');
+
+                return `
+                    <div class="compare-card">
+                        <div class="compare-card-header">
+                            <span class="compare-card-title">${info.icon} ${info.name}</span>
+                            <span class="compare-card-stat">${stats.total_chunks} chunks · avg ${stats.avg_chars} ch</span>
+                        </div>
+                        <div class="compare-card-body">
+                            <div class="compare-chunk-bar">${barsHtml}</div>
+                            <div style="margin-top:12px">${previewsHtml}</div>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        // =====================================================================
+        // UTILS
+        // =====================================================================
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        // Boot
+        init();
+    </script>
+</body>
+
+</html>
