@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Embedding Demo — Visualize 5 Methods</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --font: 'Inter', -apple-system, sans-serif;
+            --mono: 'JetBrains Mono', monospace;
+            --bg: #0a0b10;
+            --bg-card: #13151d;
+            --bg-input: #1c1f2e;
+            --border: #262a3d;
+            --border-hover: #3d4260;
+            --text: #e4e6f0;
+            --text-sec: #9ea3b8;
+            --text-muted: #5d6177;
+            --accent: #f59e0b;
+            --accent-hover: #d97706;
+            --accent-glow: rgba(245, 158, 11, 0.15);
+            --green: #34d399;
+            --cyan: #22d3ee;
+            --pink: #f472b6;
+            --purple: #a78bfa;
+            --red: #f87171;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --transition: all 0.2s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .header {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px 28px 0;
+        }
+
+        .header h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent), #ef4444);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-sub {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px 28px 40px;
+        }
+
+        /* Input Section */
+        .input-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px 24px;
+            margin-bottom: 20px;
+        }
+
+        .input-section h2 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-sec);
+        }
+
+        .sentences-area {
+            width: 100%;
+            min-height: 120px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 0.85rem;
+            line-height: 1.8;
+            resize: vertical;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .sentences-area:focus {
+            border-color: var(--accent);
+        }
+
+        .input-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+        }
+
+        .input-hint {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: var(--font);
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-sec);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--border-hover);
+            color: var(--text);
+        }
+
+        .btn-secondary.active {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--accent-glow);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Presets */
+        .presets {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        .preset-btn {
+            font-size: 0.7rem;
+            padding: 4px 10px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 99px;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-family: var(--font);
+            transition: var(--transition);
+        }
+
+        .preset-btn:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+
+        /* View Toggle */
+        .view-toggle {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 16px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tab {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: var(--font);
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-sec);
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+
+        .tab:hover {
+            border-color: var(--border-hover);
+            color: var(--text);
+        }
+
+        .tab.active {
+            border-color: var(--accent);
+            color: var(--text);
+            background: var(--accent-glow);
+        }
+
+        .tab-type {
+            font-size: 0.6rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .type-sparse {
+            background: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+        }
+
+        .type-dense {
+            background: rgba(52, 211, 153, 0.2);
+            color: #34d399;
+        }
+
+        /* Result Panel */
+        .result-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-header h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .panel-header p {
+            font-size: 0.8rem;
+            color: var(--text-sec);
+        }
+
+        /* Stats Strip */
+        .stats-strip {
+            display: flex;
+            gap: 20px;
+            padding: 12px 24px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(245, 158, 11, 0.03);
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stat-val {
+            font-family: var(--mono);
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--cyan);
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        /* Viz Tabs */
+        .viz-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .viz-tab {
+            padding: 10px 20px;
+            font-family: var(--font);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            border-bottom: 2px solid transparent;
+            transition: var(--transition);
+        }
+
+        .viz-tab:hover {
+            color: var(--text);
+        }
+
+        .viz-tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        /* Viz Content */
+        .viz-content {
+            padding: 20px 24px;
+            min-height: 300px;
+        }
+
+        .viz-pane {
+            display: none;
+        }
+
+        .viz-pane.active {
+            display: block;
+        }
+
+        /* Heatmap */
+        .heatmap-wrapper {
+            overflow-x: auto;
+            padding-bottom: 12px;
+        }
+
+        .heatmap-table {
+            border-collapse: collapse;
+            font-family: var(--mono);
+            font-size: 0.65rem;
+        }
+
+        .heatmap-table th {
+            padding: 4px 6px;
+            text-align: center;
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.6rem;
+            max-width: 50px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .heatmap-table td {
+            width: 24px;
+            height: 24px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            font-size: 0.55rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .heatmap-label {
+            font-size: 0.7rem;
+            color: var(--text-sec);
+            padding: 4px 8px;
+            text-align: right;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Similarity Matrix */
+        .sim-matrix {
+            border-collapse: collapse;
+            font-family: var(--mono);
+            font-size: 0.75rem;
+        }
+
+        .sim-matrix th {
+            padding: 8px 12px;
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sim-matrix td {
+            padding: 8px 12px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            min-width: 60px;
+        }
+
+        /* Scatter Plot */
+        .scatter-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .scatter-canvas {
+            width: 100%;
+            height: 400px;
+            background: var(--bg-input);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+        }
+
+        .scatter-legend {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .scatter-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72rem;
+            color: var(--text-sec);
+        }
+
+        .scatter-dot-legend {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .pca-info {
+            text-align: center;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        /* Vocab Section */
+        .vocab-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .vocab-word {
+            padding: 4px 10px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-family: var(--mono);
+            font-size: 0.72rem;
+            color: var(--text-sec);
+        }
+
+        /* Compare Mode */
+        .compare-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 16px;
+        }
+
+        .compare-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .compare-card-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .compare-card-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .compare-card-meta {
+            font-family: var(--mono);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+        }
+
+        .compare-card-body {
+            padding: 12px 16px;
+        }
+
+        .compare-stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .compare-stat-item {
+            background: var(--bg-input);
+            border-radius: 6px;
+            padding: 8px 10px;
+        }
+
+        .compare-stat-val {
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--cyan);
+        }
+
+        .compare-stat-lbl {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .mini-scatter {
+            width: 100%;
+            height: 180px;
+            background: var(--bg-input);
+            border-radius: 6px;
+        }
+
+        /* Loading */
+        .loading {
+            padding: 40px;
+            text-align: center;
+            color: var(--text-muted);
+            display: none;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            width: 28px;
+            height: 28px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 1000;
+        }
+
+        .toast {
+            padding: 12px 20px;
+            border-radius: var(--radius-sm);
+            font-size: 0.82rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 3.7s forwards;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .toast-error {
+            background: #7f1d1d;
+            color: var(--red);
+            border: 1px solid #b91c1c;
+        }
+
+        .toast-info {
+            background: #1e1b4b;
+            color: #a5b4fc;
+            border: 1px solid #3730a3;
+        }
+
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateX(40px);
+            }
+        }
+
+        @keyframes toastOut {
+            to {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        @media (max-width: 768px) {
+            .main {
+                padding: 12px;
+            }
+
+            .compare-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <h1>🔢 RAG Embedding Demo</h1>
+        <div class="header-sub">Enter sentences · Compare 5 embedding methods · Visualize vectors, similarity & clusters
+        </div>
+    </header>
+
+    <div class="main">
+        <!-- Input Section -->
+        <div class="input-section">
+            <h2>📝 Enter Sentences <span style="font-weight:400; color:var(--text-muted)">(one per line)</span></h2>
+            <textarea class="sentences-area" id="sentencesInput"
+                placeholder="Enter sentences here, one per line...&#10;&#10;Example:&#10;The cat sat on the mat&#10;The dog played in the park&#10;Machine learning is fascinating"></textarea>
+            <div class="presets">
+                <span style="font-size:0.7rem; color:var(--text-muted); margin-right:4px;">Presets:</span>
+                <button class="preset-btn" onclick="loadPreset('animals')">🐾 Animals</button>
+                <button class="preset-btn" onclick="loadPreset('tech')">💻 Technology</button>
+                <button class="preset-btn" onclick="loadPreset('semantic')">🧠 Semantic Similarity</button>
+                <button class="preset-btn" onclick="loadPreset('mixed')">🎲 Mixed Topics</button>
+            </div>
+            <div class="input-footer">
+                <span class="input-hint" id="sentenceCount">0 sentences</span>
+                <div class="btn-row">
+                    <button class="btn btn-secondary" id="compareAllBtn" onclick="runCompareAll()">📊 Compare
+                        All</button>
+                    <button class="btn btn-primary" id="runBtn" onclick="runEmbed()">▶ Embed</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Method Tabs -->
+        <div class="tabs" id="methodTabs" style="display:none"></div>
+
+        <!-- Single View -->
+        <div class="result-panel" id="resultPanel" style="display:none">
+            <div class="panel-header">
+                <h2 id="panelTitle"></h2>
+                <p id="panelDesc"></p>
+            </div>
+            <div class="stats-strip" id="statsStrip"></div>
+            <div class="viz-tabs" id="vizTabs">
+                <button class="viz-tab active" data-viz="heatmap" onclick="showViz('heatmap')">🗺️ Heatmap</button>
+                <button class="viz-tab" data-viz="similarity" onclick="showViz('similarity')">🔗 Similarity</button>
+                <button class="viz-tab" data-viz="scatter" onclick="showViz('scatter')">📍 2D Plot</button>
+                <button class="viz-tab" data-viz="vocab" onclick="showViz('vocab')">📚 Vocabulary</button>
+            </div>
+            <div class="viz-content">
+                <div class="viz-pane active" id="viz-heatmap"></div>
+                <div class="viz-pane" id="viz-similarity"></div>
+                <div class="viz-pane" id="viz-scatter"></div>
+                <div class="viz-pane" id="viz-vocab"></div>
+            </div>
+            <div class="loading" id="loading">
+                <div class="spinner"></div>Computing embeddings...
+            </div>
+        </div>
+
+        <!-- Compare View -->
+        <div class="compare-grid" id="compareGrid" style="display:none"></div>
+        <div class="loading" id="compareLoading">
+            <div class="spinner"></div>Computing all 5 methods...
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // =================================================================
+        // STATE
+        // =================================================================
+        let methods = {};
+        let activeMethod = 'one_hot';
+        let currentResult = null;
+        let currentView = 'single';
+        const COLORS = ['#f59e0b', '#3b82f6', '#ef4444', '#10b981', '#a855f7', '#ec4899', '#06b6d4', '#f97316'];
+
+        const PRESETS = {
+            animals: [
+                "The cat sat on the mat",
+                "The dog played in the park",
+                "A bird flew over the tree",
+                "Fish swim in the ocean",
+                "The cat chased a mouse",
+            ],
+            tech: [
+                "Machine learning is a subset of artificial intelligence",
+                "Deep learning uses neural networks with many layers",
+                "Natural language processing helps computers understand text",
+                "Computer vision enables machines to interpret images",
+                "Reinforcement learning trains agents through rewards",
+            ],
+            semantic: [
+                "The weather is nice today",
+                "It's a beautiful sunny day",
+                "I love programming in Python",
+                "Python is my favorite coding language",
+                "The stock market crashed yesterday",
+                "Financial markets experienced a major downturn",
+            ],
+            mixed: [
+                "The quick brown fox jumps over the lazy dog",
+                "Artificial intelligence is transforming healthcare",
+                "The cat sat on the warm windowsill",
+                "Quantum computing will revolutionize cryptography",
+                "She walked along the beach at sunset",
+            ],
+        };
+
+        // =================================================================
+        // INIT
+        // =================================================================
+        async function init() {
+            const res = await fetch('/api/methods');
+            methods = await res.json();
+            buildTabs();
+            updateCount();
+        }
+
+        const textarea = document.getElementById('sentencesInput');
+        textarea.addEventListener('input', updateCount);
+
+        function updateCount() {
+            const lines = getSentences();
+            document.getElementById('sentenceCount').textContent = `${lines.length} sentence${lines.length !== 1 ? 's' : ''}`;
+        }
+
+        function getSentences() {
+            return textarea.value.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+        }
+
+        function loadPreset(name) {
+            textarea.value = PRESETS[name].join('\n');
+            updateCount();
+        }
+
+        // =================================================================
+        // TABS
+        // =================================================================
+        function buildTabs() {
+            const container = document.getElementById('methodTabs');
+            container.innerHTML = '';
+            for (const [key, info] of Object.entries(methods)) {
+                const tab = document.createElement('button');
+                tab.className = 'tab';
+                tab.dataset.key = key;
+                const typeClass = info.type === 'Sparse' ? 'type-sparse' : 'type-dense';
+                tab.innerHTML = `${info.icon} ${info.name} <span class="tab-type ${typeClass}">${info.type}</span>`;
+                tab.onclick = () => { activeMethod = key; updateTabUI(); runEmbed(); };
+                container.appendChild(tab);
+            }
+        }
+
+        function updateTabUI() {
+            document.querySelectorAll('.tab').forEach(t =>
+                t.classList.toggle('active', t.dataset.key === activeMethod));
+        }
+
+        // =================================================================
+        // RUN EMBED
+        // =================================================================
+        async function runEmbed() {
+            const sentences = getSentences();
+            if (sentences.length < 2) {
+                showToast('Enter at least 2 sentences (one per line).', 'error');
+                return;
+            }
+
+            currentView = 'single';
+            document.getElementById('methodTabs').style.display = '';
+            document.getElementById('resultPanel').style.display = '';
+            document.getElementById('compareGrid').style.display = 'none';
+            updateTabUI();
+
+            const panel = document.getElementById('resultPanel');
+            document.getElementById('loading').classList.add('show');
+            document.querySelectorAll('.viz-pane').forEach(p => p.innerHTML = '');
+            document.getElementById('statsStrip').innerHTML = '';
+
+            try {
+                const res = await fetch('/api/embed', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sentences, method: activeMethod }),
+                });
+                const data = await res.json();
+                if (!res.ok) { showToast(`❌ ${data.detail}`, 'error'); return; }
+
+                currentResult = data;
+                renderResult(data);
+
+            } catch (e) {
+                showToast(`❌ ${e.message}`, 'error');
+            } finally {
+                document.getElementById('loading').classList.remove('show');
+            }
+        }
+
+        // =================================================================
+        // RENDER RESULT
+        // =================================================================
+        function renderResult(data) {
+            // Title
+            const info = methods[data.method];
+            document.getElementById('panelTitle').textContent = `${info.icon} ${info.name}`;
+            document.getElementById('panelDesc').textContent = data.description;
+
+            // Stats
+            document.getElementById('statsStrip').innerHTML = `
+                <div class="stat"><span class="stat-val">${data.full_dimensions}</span><span class="stat-label">Dimensions</span></div>
+                <div class="stat"><span class="stat-val">${data.method_type}</span><span class="stat-label">Type</span></div>
+                <div class="stat"><span class="stat-val">${(data.stats.sparsity * 100).toFixed(1)}%</span><span class="stat-label">Sparsity</span></div>
+                <div class="stat"><span class="stat-val">${data.stats.avg_magnitude}</span><span class="stat-label">Avg Magnitude</span></div>
+                ${data.truncated ? `<div class="stat"><span class="stat-val" style="color:var(--accent)">Showing ${data.display_dimensions}/${data.full_dimensions}</span><span class="stat-label">Dims displayed</span></div>` : ''}
+            `;
+
+            renderHeatmap(data);
+            renderSimilarity(data);
+            renderScatter(data);
+            renderVocab(data);
+            showViz('heatmap');
+        }
+
+        // =================================================================
+        // HEATMAP
+        // =================================================================
+        function renderHeatmap(data) {
+            const container = document.getElementById('viz-heatmap');
+            const { vectors, sentences, vocab, display_dimensions } = data;
+
+            // Find value range for color mapping
+            const allVals = vectors.flat();
+            const maxVal = Math.max(...allVals.map(Math.abs), 0.001);
+
+            let html = '<div class="heatmap-wrapper"><table class="heatmap-table"><thead><tr><th></th>';
+
+            // Column headers (vocab words or dimension indices)
+            const dims = display_dimensions;
+            for (let d = 0; d < dims; d++) {
+                const label = vocab && vocab[d] ? vocab[d] : `d${d}`;
+                html += `<th title="${label}">${label.substring(0, 5)}</th>`;
+            }
+            html += '</tr></thead><tbody>';
+
+            // Rows (sentences)
+            for (let i = 0; i < sentences.length; i++) {
+                html += `<tr><td class="heatmap-label" title="${esc(sentences[i])}">${esc(sentences[i].substring(0, 30))}${sentences[i].length > 30 ? '…' : ''}</td>`;
+                for (let d = 0; d < dims; d++) {
+                    const val = vectors[i][d] || 0;
+                    const intensity = Math.abs(val) / maxVal;
+                    const color = val > 0
+                        ? `rgba(245, 158, 11, ${intensity * 0.9})`
+                        : val < 0
+                            ? `rgba(99, 102, 241, ${intensity * 0.9})`
+                            : 'transparent';
+                    html += `<td style="background:${color}" title="${val.toFixed(4)}">${Math.abs(val) > 0.01 ? val.toFixed(2) : ''}</td>`;
+                }
+                html += '</tr>';
+            }
+
+            html += '</tbody></table></div>';
+            html += '<div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">🟠 Positive values &nbsp; 🔵 Negative values &nbsp; Hover cells for exact values</div>';
+            container.innerHTML = html;
+        }
+
+        // =================================================================
+        // SIMILARITY MATRIX
+        // =================================================================
+        function renderSimilarity(data) {
+            const container = document.getElementById('viz-similarity');
+            const { similarity_matrix: sim, sentences } = data;
+
+            let html = '<div class="heatmap-wrapper"><table class="sim-matrix"><thead><tr><th></th>';
+
+            for (let i = 0; i < sentences.length; i++) {
+                html += `<th title="${esc(sentences[i])}">S${i + 1}</th>`;
+            }
+            html += '</tr></thead><tbody>';
+
+            for (let i = 0; i < sim.length; i++) {
+                html += `<tr><td class="heatmap-label" title="${esc(sentences[i])}">S${i + 1}: ${esc(sentences[i].substring(0, 25))}${sentences[i].length > 25 ? '…' : ''}</td>`;
+                for (let j = 0; j < sim[i].length; j++) {
+                    const val = sim[i][j];
+                    const hue = val > 0 ? 140 : 0;
+                    const sat = Math.abs(val) * 100;
+                    const light = 15 + Math.abs(val) * 20;
+                    const color = i === j
+                        ? 'rgba(245, 158, 11, 0.3)'
+                        : `hsl(${hue}, ${sat}%, ${light}%)`;
+                    const textColor = Math.abs(val) > 0.5 ? '#fff' : 'var(--text-sec)';
+                    html += `<td style="background:${color}; color:${textColor}">${val.toFixed(3)}</td>`;
+                }
+                html += '</tr>';
+            }
+
+            html += '</tbody></table></div>';
+            html += '<div style="margin-top:10px; font-size:0.7rem; color:var(--text-muted);">🟢 High similarity (close to 1.0) &nbsp; ⚫ Low similarity (close to 0.0) &nbsp; 🟠 Diagonal (self-similarity = 1.0)</div>';
+
+            // Legend
+            html += '<div style="margin-top:12px;"><strong style="font-size:0.8rem;">Sentence Key:</strong><ul style="font-size:0.75rem; color:var(--text-sec); margin-top:4px; padding-left:20px;">';
+            sentences.forEach((s, i) => {
+                html += `<li><strong>S${i + 1}:</strong> ${esc(s)}</li>`;
+            });
+            html += '</ul></div>';
+            container.innerHTML = html;
+        }
+
+        // =================================================================
+        // 2D SCATTER PLOT
+        // =================================================================
+        function renderScatter(data) {
+            const container = document.getElementById('viz-scatter');
+            const { pca_2d: points, pca_variance: variance, sentences } = data;
+
+            container.innerHTML = `
+                <div class="scatter-container">
+                    <canvas class="scatter-canvas" id="scatterCanvas"></canvas>
+                    <div class="pca-info">PCA variance explained: X-axis ${variance[0] || 0}% · Y-axis ${variance[1] || 0}%</div>
+                    <div class="scatter-legend" id="scatterLegend"></div>
+                </div>`;
+
+            const canvas = document.getElementById('scatterCanvas');
+            const ctx = canvas.getContext('2d');
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * 2;
+            canvas.height = rect.height * 2;
+            ctx.scale(2, 2);
+            const W = rect.width;
+            const H = rect.height;
+
+            // Background
+            ctx.fillStyle = '#1c1f2e';
+            ctx.fillRect(0, 0, W, H);
+
+            // Grid
+            ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x <= W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+            for (let y = 0; y <= H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+            if (points.length < 2) return;
+
+            // Scale points to fit
+            const xs = points.map(p => p.x);
+            const ys = points.map(p => p.y);
+            const xmin = Math.min(...xs), xmax = Math.max(...xs);
+            const ymin = Math.min(...ys), ymax = Math.max(...ys);
+            const xrange = xmax - xmin || 1;
+            const yrange = ymax - ymin || 1;
+            const pad = 60;
+
+            function scaleX(x) { return pad + ((x - xmin) / xrange) * (W - 2 * pad); }
+            function scaleY(y) { return pad + ((y - ymin) / yrange) * (H - 2 * pad); }
+
+            // Axes
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.lineWidth = 1;
+            const cx = scaleX(0), cy = scaleY(0);
+            if (cx > pad && cx < W - pad) { ctx.beginPath(); ctx.moveTo(cx, pad); ctx.lineTo(cx, H - pad); ctx.stroke(); }
+            if (cy > pad && cy < H - pad) { ctx.beginPath(); ctx.moveTo(pad, cy); ctx.lineTo(W - pad, cy); ctx.stroke(); }
+
+            // Draw points
+            const legendEl = document.getElementById('scatterLegend');
+            let legendHtml = '';
+
+            points.forEach((p, i) => {
+                const sx = scaleX(p.x);
+                const sy = scaleY(p.y);
+                const color = COLORS[i % COLORS.length];
+
+                // Glow
+                ctx.beginPath();
+                ctx.arc(sx, sy, 16, 0, Math.PI * 2);
+                ctx.fillStyle = color + '20';
+                ctx.fill();
+
+                // Dot
+                ctx.beginPath();
+                ctx.arc(sx, sy, 7, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Label
+                ctx.font = '600 11px Inter';
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'center';
+                ctx.fillText(`S${i + 1}`, sx, sy - 14);
+
+                legendHtml += `<div class="scatter-legend-item"><div class="scatter-dot-legend" style="background:${color}"></div>S${i + 1}: ${sentences[i].substring(0, 40)}${sentences[i].length > 40 ? '…' : ''}</div>`;
+            });
+
+            legendEl.innerHTML = legendHtml;
+        }
+
+        // =================================================================
+        // VOCAB
+        // =================================================================
+        function renderVocab(data) {
+            const container = document.getElementById('viz-vocab');
+            if (!data.vocab || data.vocab.length === 0) {
+                container.innerHTML = '<div style="padding:20px; color:var(--text-muted);">This method does not expose a discrete vocabulary (sentence-level embeddings).</div>';
+                return;
+            }
+            let html = `<div style="margin-bottom:12px; font-size:0.8rem; color:var(--text-sec);">Vocabulary (${data.vocab.length} words${data.full_dimensions > data.vocab.length ? ', showing top ' + data.vocab.length : ''})</div>`;
+            html += '<div class="vocab-grid">';
+            data.vocab.forEach((w, i) => {
+                html += `<div class="vocab-word" style="border-left: 3px solid ${COLORS[i % COLORS.length]}">${esc(w)}</div>`;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // =================================================================
+        // VIZ TABS
+        // =================================================================
+        function showViz(name) {
+            document.querySelectorAll('.viz-tab').forEach(t => t.classList.toggle('active', t.dataset.viz === name));
+            document.querySelectorAll('.viz-pane').forEach(p => p.classList.toggle('active', p.id === `viz-${name}`));
+            // Re-render scatter if needed (canvas resizing)
+            if (name === 'scatter' && currentResult) {
+                setTimeout(() => renderScatter(currentResult), 50);
+            }
+        }
+
+        // =================================================================
+        // COMPARE ALL
+        // =================================================================
+        async function runCompareAll() {
+            const sentences = getSentences();
+            if (sentences.length < 2) {
+                showToast('Enter at least 2 sentences.', 'error');
+                return;
+            }
+
+            document.getElementById('methodTabs').style.display = 'none';
+            document.getElementById('resultPanel').style.display = 'none';
+            document.getElementById('compareGrid').style.display = '';
+            document.getElementById('compareLoading').classList.add('show');
+            document.getElementById('compareGrid').innerHTML = '';
+
+            try {
+                const res = await fetch('/api/embed_all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sentences }),
+                });
+                const data = await res.json();
+                if (!res.ok) { showToast(`❌ ${data.detail}`, 'error'); return; }
+
+                renderCompare(data);
+
+            } catch (e) {
+                showToast(`❌ ${e.message}`, 'error');
+            } finally {
+                document.getElementById('compareLoading').classList.remove('show');
+            }
+        }
+
+        function renderCompare(data) {
+            const grid = document.getElementById('compareGrid');
+            const { sentences, results } = data;
+
+            let html = '';
+            for (const [key, r] of Object.entries(results)) {
+                if (r.error) {
+                    html += `<div class="compare-card"><div class="compare-card-header"><span class="compare-card-title">${r.name}</span></div><div class="compare-card-body" style="color:var(--red)">❌ ${r.error}</div></div>`;
+                    continue;
+                }
+
+                const typeClass = r.type === 'Sparse' ? 'type-sparse' : 'type-dense';
+
+                html += `
+                <div class="compare-card">
+                    <div class="compare-card-header">
+                        <span class="compare-card-title">${r.icon} ${r.name} <span class="tab-type ${typeClass}">${r.type}</span></span>
+                    </div>
+                    <div class="compare-card-body">
+                        <div class="compare-stat-grid">
+                            <div class="compare-stat-item"><div class="compare-stat-val">${r.dimensions}</div><div class="compare-stat-lbl">Dimensions</div></div>
+                            <div class="compare-stat-item"><div class="compare-stat-val">${(r.sparsity * 100).toFixed(1)}%</div><div class="compare-stat-lbl">Sparsity</div></div>
+                            <div class="compare-stat-item"><div class="compare-stat-val">${r.sim_avg.toFixed(3)}</div><div class="compare-stat-lbl">Avg Similarity</div></div>
+                            <div class="compare-stat-item"><div class="compare-stat-val">${r.sim_min.toFixed(3)} — ${r.sim_max.toFixed(3)}</div><div class="compare-stat-lbl">Sim Range</div></div>
+                        </div>
+                        <canvas class="mini-scatter" id="mini-scatter-${key}"></canvas>
+                    </div>
+                </div>`;
+            }
+
+            grid.innerHTML = html;
+
+            // Draw mini scatter plots
+            for (const [key, r] of Object.entries(results)) {
+                if (r.error || !r.pca_2d) continue;
+                drawMiniScatter(`mini-scatter-${key}`, r.pca_2d, sentences);
+            }
+        }
+
+        function drawMiniScatter(canvasId, points, sentences) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * 2;
+            canvas.height = rect.height * 2;
+            ctx.scale(2, 2);
+            const W = rect.width, H = rect.height;
+
+            ctx.fillStyle = '#1c1f2e';
+            ctx.fillRect(0, 0, W, H);
+
+            if (points.length < 2) return;
+
+            const xs = points.map(p => p.x);
+            const ys = points.map(p => p.y);
+            const xmin = Math.min(...xs), xmax = Math.max(...xs);
+            const ymin = Math.min(...ys), ymax = Math.max(...ys);
+            const xr = xmax - xmin || 1, yr = ymax - ymin || 1;
+            const pad = 30;
+
+            points.forEach((p, i) => {
+                const sx = pad + ((p.x - xmin) / xr) * (W - 2 * pad);
+                const sy = pad + ((p.y - ymin) / yr) * (H - 2 * pad);
+                const color = COLORS[i % COLORS.length];
+
+                ctx.beginPath();
+                ctx.arc(sx, sy, 10, 0, Math.PI * 2);
+                ctx.fillStyle = color + '20';
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+
+                ctx.font = '600 9px Inter';
+                ctx.fillStyle = '#aaa';
+                ctx.textAlign = 'center';
+                ctx.fillText(`S${i + 1}`, sx, sy - 10);
+            });
+        }
+
+        // =================================================================
+        // UTILS
+        // =================================================================
+        function esc(text) {
+            const d = document.createElement('div');
+            d.textContent = text;
+            return d.innerHTML;
+        }
+
+        function showToast(msg, type = 'info') {
+            const c = document.getElementById('toastContainer');
+            const t = document.createElement('div');
+            t.className = `toast toast-${type}`;
+            t.textContent = msg;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 4000);
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

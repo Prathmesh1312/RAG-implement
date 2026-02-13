@@ -1,6 +1,6 @@
 # 🧠 RAG Workshop — Demo Projects
 
-A collection of **3 standalone RAG (Retrieval-Augmented Generation) projects** designed for workshop demonstrations, learning, and experimentation.
+A collection of **4 standalone RAG (Retrieval-Augmented Generation) projects** designed for workshop demonstrations, learning, and experimentation.
 
 Each project is self-contained with its own backend, web UI, and dependencies.
 
@@ -13,6 +13,7 @@ Each project is self-contained with its own backend, web UI, and dependencies.
 | 1 | [📄 RAG Local](./rag_local/) | `8001` | Upload local PDF files and ask questions |
 | 2 | [🌐 RAG Online](./rag_online/) | `8002` | Paste web links (articles, PDFs) and ask questions |
 | 3 | [✂️ Chunking Demo](./rag_chunking/) | `8003` | Visualize and compare 7 chunking strategies |
+| 4 | [🔢 Embedding Demo](./rag_embedding/) | `8004` | Visualize and compare 5 embedding methods |
 
 ---
 
@@ -52,6 +53,18 @@ cd rag_chunking && uvicorn main:app --reload --port 8003
 
 ---
 
+### 🔢 Embedding Demo — `rag_embedding/`
+
+Enter sentences and **visually compare** how 5 different embedding methods represent them. See heatmaps, similarity matrices, and 2D cluster plots. No LLM needed.
+
+**Methods:** One-Hot · Bag of Words · TF-IDF · Word2Vec · Sentence Transformers
+
+```bash
+cd rag_embedding && uvicorn main:app --reload --port 8004
+```
+
+---
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -62,7 +75,7 @@ cd rag_chunking && uvicorn main:app --reload --port 8003
 | **Ollama** | RAG Local & Online | [ollama.com](https://ollama.com) |
 | **gemma3:4b model** | RAG Local & Online | `ollama pull gemma3:4b` |
 
-> **Note:** The Chunking Demo does not require Ollama or any LLM.
+> **Note:** The Chunking Demo and Embedding Demo do not require Ollama or any LLM.
 
 ### Run Any Project
 
@@ -78,7 +91,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # 4. Start the server
-uvicorn main:app --reload --port 8001   # 8002 for online, 8003 for chunking
+uvicorn main:app --reload --port 8001   # 8002 for online, 8003 for chunking, 8004 for embedding
 ```
 
 ### Run All Projects Simultaneously
@@ -92,6 +105,9 @@ cd rag_online && uvicorn main:app --reload --port 8002
 
 # Terminal 3
 cd rag_chunking && uvicorn main:app --reload --port 8003
+
+# Terminal 4
+cd rag_embedding && uvicorn main:app --reload --port 8004
 ```
 
 ## 🏗️ Tech Stack
@@ -102,8 +118,11 @@ cd rag_chunking && uvicorn main:app --reload --port 8003
 | LLM | Ollama (gemma3:4b) | Local, Online |
 | Embeddings | HuggingFace sentence-transformers | Local, Online |
 | Vector Store | ChromaDB | Local, Online |
-| PDF Parsing | pypdf | All |
+| PDF Parsing | pypdf | Local, Online, Chunking |
 | Web Scraping | BeautifulSoup + lxml | Online |
+| Sparse Embeddings | scikit-learn | Embedding |
+| Word2Vec | gensim | Embedding |
+| Sentence Embeddings | sentence-transformers | Local, Online, Embedding |
 | UI | Vanilla HTML/CSS/JS | All |
 | Orchestration | LangChain | Local, Online |
 
@@ -125,7 +144,13 @@ rag1.5/
 │   ├── requirements.txt
 │   └── README.md
 │
-└── rag_chunking/           ← Project 3: Chunking Visualization
+├── rag_chunking/           ← Project 3: Chunking Visualization
+│   ├── main.py
+│   ├── templates/index.html
+│   ├── requirements.txt
+│   └── README.md
+│
+└── rag_embedding/          ← Project 4: Embedding Visualization
     ├── main.py
     ├── templates/index.html
     ├── requirements.txt
